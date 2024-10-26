@@ -1,6 +1,12 @@
+'use client';
+
 import Image from "next/image";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
 
 export default function Home() {
+  const { data: session } = useSession();
+
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
@@ -22,6 +28,17 @@ export default function Home() {
           </li>
           <li>Save and see your changes instantly.</li>
         </ol>
+
+        <div className="flex gap-4 mb-4">
+          {session ? (
+            <p>Hi, {session.user.name || session.user.email}</p>
+          ) : (
+            <>
+              <Link href="/register" className="text-blue-500 hover:underline">Register</Link>
+              <Link href="/login" className="text-blue-500 hover:underline">Login</Link>
+            </>
+          )}
+        </div>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <a
