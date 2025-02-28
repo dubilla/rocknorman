@@ -22,19 +22,28 @@ export const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          throw new Error('Please enter an email and password');
         }
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email }
         });
-        if (!user) {
-          return null;
+
+        if (!user || !user.password) {
+          throw new Error('No user found with this email');
         }
+
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+
         if (!isPasswordValid) {
-          return null;
+          throw new Error('Invalid password');
         }
-        return user;
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        };
       }
     }),
   ],
@@ -43,6 +52,20 @@ export const authOptions = {
   },
   pages: {
     signIn: '/login',
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.id;
+      }
+      return session;
+    },
   },
 };
 
