@@ -25,10 +25,13 @@ export async function GET(req) {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
     return new Response(JSON.stringify({ error: 'Failed to fetch Spotify accounts' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
+  } finally {
+    await prisma.$disconnect();
   }
 } 
