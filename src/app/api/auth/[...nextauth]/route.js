@@ -7,12 +7,25 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Spotify scopes for API access
+const scopes = [
+  'user-read-email',
+  'user-read-private',
+  'playlist-read-private',
+  'playlist-read-collaborative',
+  'playlist-modify-private',
+  'playlist-modify-public',
+].join(' ');
+
 export const authOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     SpotifyProvider({
       clientId: process.env.SPOTIFY_CLIENT_ID,
       clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+      authorization: {
+        params: { scope: scopes }
+      }
     }),
     CredentialsProvider({
       name: 'Credentials',
@@ -54,10 +67,56 @@ export const authOptions = {
     signIn: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
       if (user) {
         token.id = user.id;
       }
+      
+      // Store Spotify tokens when a user connects their account
+      if (account && account.provider === 'spotify') {
+        try {
+          // Get the current user from the session token
+          const currentUser = await prisma.user.findUnique({
+            where: { id: token.id }
+          });
+          
+          if (currentUser) {
+            // Check if this Spotify account is already connected
+            const existingAccount = await prisma.spotifyAccount.findUnique({
+              where: { spotifyId: profile.id }
+            });
+            
+            if (!existingAccount) {
+              // Create a new SpotifyAccount record
+              await prisma.spotifyAccount.create({
+                data: {
+                  userId: currentUser.id,
+                  spotifyId: profile.id,
+                  displayName: profile.display_name,
+                  email: profile.email,
+                  imageUrl: profile.images?.[0]?.url,
+                  accessToken: account.access_token,
+                  refreshToken: account.refresh_token,
+                  expiresAt: new Date(Date.now() + account.expires_in * 1000),
+                }
+              });
+            } else {
+              // Update existing account with new tokens
+              await prisma.spotifyAccount.update({
+                where: { id: existingAccount.id },
+                data: {
+                  accessToken: account.access_token,
+                  refreshToken: account.refresh_token,
+                  expiresAt: new Date(Date.now() + account.expires_in * 1000),
+                }
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error saving Spotify account:', error);
+        }
+      }
+      
       return token;
     },
     async session({ session, token }) {
@@ -65,6 +124,10 @@ export const authOptions = {
         session.user.id = token.id;
       }
       return session;
+    },
+    async signIn({ user, account, profile }) {
+      // Always allow sign in
+      return true;
     },
   },
 };

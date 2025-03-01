@@ -25,6 +25,14 @@ export default function SpotifyAccounts() {
     fetchAccounts();
   }, []);
 
+  const connectSpotify = async () => {
+    // Direct approach using signIn
+    await signIn('spotify', { 
+      callbackUrl: '/dashboard',
+      redirect: true
+    });
+  };
+
   if (loading) return <div>Loading accounts...</div>;
   if (error) return <div>Error: {error}</div>;
 
@@ -34,7 +42,7 @@ export default function SpotifyAccounts() {
         <h2 className="text-xl font-bold">Your Spotify Accounts</h2>
         {accounts.length > 0 && (
           <button
-            onClick={() => signIn('spotify')}
+            onClick={connectSpotify}
             className="px-4 py-2 text-sm bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
           >
             Connect Another Account
@@ -46,7 +54,7 @@ export default function SpotifyAccounts() {
         <div className="text-center py-8 border-2 border-dashed rounded-lg">
           <p className="text-gray-600 mb-4">No Spotify accounts connected</p>
           <button
-            onClick={() => signIn('spotify')}
+            onClick={connectSpotify}
             className="px-6 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
           >
             Connect Spotify Account
