@@ -1,5 +1,5 @@
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../../auth/[...nextauth]/route';
+import { authOptions } from '../../../auth/[...nextauth]/route';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -15,6 +15,7 @@ export async function GET(req, { params }) {
       });
     }
 
+    // Fix: Await the params object before accessing id
     const id = await params.id;
     
     if (!id) {
@@ -23,10 +24,6 @@ export async function GET(req, { params }) {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-
-    // Get the URL parameters
-    const url = new URL(req.url);
-    const limit = url.searchParams.get('limit') || 50; // Default to 50 tracks instead of 10
 
     // Get the Spotify account for this user
     const spotifyAccount = await prisma.account.findFirst({
@@ -43,8 +40,8 @@ export async function GET(req, { params }) {
       });
     }
 
-    // Fetch tracks from the playlist with the specified limit
-    const response = await fetch(`https://api.spotify.com/v1/playlists/${id}/tracks?limit=${limit}`, {
+    // Fetch playlist details from Spotify API
+    const response = await fetch(`https://api.spotify.com/v1/playlists/${id}`, {
       headers: {
         'Authorization': `Bearer ${spotifyAccount.access_token}`
       }
@@ -58,7 +55,7 @@ export async function GET(req, { params }) {
         });
       }
       
-      return new Response(JSON.stringify({ error: 'Failed to fetch tracks from Spotify' }), {
+      return new Response(JSON.stringify({ error: 'Failed to fetch playlist from Spotify' }), {
         status: response.status,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -72,8 +69,8 @@ export async function GET(req, { params }) {
     });
 
   } catch (error) {
-    console.error('Error fetching playlist tracks:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch playlist tracks' }), {
+    console.error('Error fetching playlist:', error);
+    return new Response(JSON.stringify({ error: 'Failed to fetch playlist' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

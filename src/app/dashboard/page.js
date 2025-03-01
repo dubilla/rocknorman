@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import SpotifyAccounts from '../components/SpotifyAccounts';
 import SpotifyPlaylists from '../components/SpotifyPlaylists';
+import { useRouter } from 'next/navigation';
 
 export default function Dashboard() {
   const { data: session } = useSession();
@@ -11,6 +12,7 @@ export default function Dashboard() {
   const [playlistTracks, setPlaylistTracks] = useState([]);
   const [loadingTracks, setLoadingTracks] = useState(false);
   const [tracksError, setTracksError] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchPlaylistTracks = async () => {
@@ -88,12 +90,20 @@ export default function Dashboard() {
                     {selectedPlaylist.tracks.total} tracks • Created by {selectedPlaylist.owner.display_name}
                   </p>
                 </div>
-                <button 
-                  onClick={() => setSelectedPlaylist(null)}
-                  className="text-sm text-blue-600 hover:text-blue-800"
-                >
-                  Clear Selection
-                </button>
+                <div className="flex space-x-3">
+                  <button 
+                    onClick={() => setSelectedPlaylist(null)}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Clear Selection
+                  </button>
+                  <button
+                    onClick={() => router.push(`/runs/create?playlist=${selectedPlaylist.id}`)}
+                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    Create Run with Playlist
+                  </button>
+                </div>
               </div>
               
               <div className="mt-4">
