@@ -197,6 +197,16 @@ export default function CreateRun() {
     if (!playlist) return;
     
     try {
+      console.log('Submitting run data:', {
+        name,
+        date,
+        distance: parseFloat(distance),
+        distanceUnit,
+        pace,
+        playlistId: playlist.id,
+        estimatedDuration: calculateDuration(),
+      });
+      
       const response = await fetch('/api/runs', {
         method: 'POST',
         headers: {
@@ -213,16 +223,19 @@ export default function CreateRun() {
         }),
       });
       
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to create run');
+        console.error('Server error response:', responseData);
+        throw new Error(responseData.error || `Failed to create run (${response.status})`);
       }
       
-      // Redirect to the runs page or the newly created run
-      router.push('/runs');
+      // Redirect to the new run page
+      router.push(`/runs/${responseData.id}`);
+      
     } catch (err) {
       console.error('Error creating run:', err);
-      setError(err.message);
+      alert(`Error creating run: ${err.message}`);
     }
   };
   
