@@ -30,7 +30,47 @@ export async function GET(req) {
       });
     }
 
-    // Fetch playlists from Spotify API
+    // Check if token is expired and refresh if needed
+    const now = Math.floor(Date.now() / 1000);
+    if (spotifyAccount.expires_at < now) {
+      // Token is expired, refresh it
+      const refreshResponse = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString('base64')}`
+        },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: spotifyAccount.refresh_token
+        })
+      });
+      
+      if (!refreshResponse.ok) {
+        return new Response(JSON.stringify({ error: 'Failed to refresh token' }), {
+          status: refreshResponse.status,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      
+      const refreshData = await refreshResponse.json();
+      
+      // Update the account with the new token
+      await prisma.account.update({
+        where: {
+          id: spotifyAccount.id
+        },
+        data: {
+          access_token: refreshData.access_token,
+          expires_at: now + refreshData.expires_in
+        }
+      });
+      
+      // Update the access token for the current request
+      spotifyAccount.access_token = refreshData.access_token;
+    }
+
+    // Fetch playlists with the valid token
     const response = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
       headers: {
         'Authorization': `Bearer ${spotifyAccount.access_token}`
@@ -38,15 +78,6 @@ export async function GET(req) {
     });
 
     if (!response.ok) {
-      // Handle token expiration by refreshing
-      if (response.status === 401) {
-        // Token expired, we should implement token refresh here
-        return new Response(JSON.stringify({ error: 'Spotify token expired' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      
       return new Response(JSON.stringify({ error: 'Failed to fetch playlists from Spotify' }), {
         status: response.status,
         headers: { 'Content-Type': 'application/json' },

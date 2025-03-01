@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import SpotifyAccounts from '../components/SpotifyAccounts';
 import SpotifyPlaylists from '../components/SpotifyPlaylists';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function Dashboard() {
   const { data: session } = useSession();
@@ -13,6 +14,11 @@ export default function Dashboard() {
   const [loadingTracks, setLoadingTracks] = useState(false);
   const [tracksError, setTracksError] = useState(null);
   const router = useRouter();
+  
+  // Add state for runs
+  const [runs, setRuns] = useState([]);
+  const [loadingRuns, setLoadingRuns] = useState(false);
+  const [runsError, setRunsError] = useState(null);
 
   useEffect(() => {
     const fetchPlaylistTracks = async () => {
@@ -47,6 +53,33 @@ export default function Dashboard() {
     }
   }, [selectedPlaylist]);
 
+  // Add effect to fetch runs
+  useEffect(() => {
+    const fetchRuns = async () => {
+      try {
+        setLoadingRuns(true);
+        setRunsError(null);
+        
+        const response = await fetch('/api/runs');
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch runs');
+        }
+        
+        const data = await response.json();
+        setRuns(data);
+      } catch (err) {
+        console.error('Error fetching runs:', err);
+        setRunsError(err.message);
+      } finally {
+        setLoadingRuns(false);
+      }
+    };
+
+    fetchRuns();
+  }, []);
+
   const handleSelectPlaylist = (playlist) => {
     setSelectedPlaylist(playlist);
     console.log('Selected playlist:', playlist);
@@ -56,6 +89,15 @@ export default function Dashboard() {
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+  
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   return (
