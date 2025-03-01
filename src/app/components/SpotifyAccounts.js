@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 
 export default function SpotifyAccounts() {
+  const { data: session, status } = useSession();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,18 +23,25 @@ export default function SpotifyAccounts() {
       }
     };
 
-    fetchAccounts();
-  }, []);
+    if (status === 'authenticated') {
+      fetchAccounts();
+    }
+  }, [status]);
 
-  const connectSpotify = async () => {
-    // Direct approach using signIn
+  const connectSpotify = async (e) => {
+    e.preventDefault();
+    console.log('Starting Spotify auth flow...');
+    
+    // Use signIn with redirect: true to properly go through the OAuth flow
     await signIn('spotify', { 
       callbackUrl: '/dashboard',
       redirect: true
     });
+    
+    // The code below won't execute immediately because the redirect happens
   };
 
-  if (loading) return <div>Loading accounts...</div>;
+  if (status === 'loading' || loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (

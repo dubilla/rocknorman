@@ -22,7 +22,6 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
-  spotifyAccounts SpotifyAccount[]
 }
 
 model Account {
@@ -58,23 +57,4 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
-}
-
-model SpotifyAccount {
-  id            String   @id @default(cuid())
-  userId        String
-  spotifyId     String   @unique
-  displayName   String?
-  email         String?
-  profileUrl    String?
-  imageUrl      String?
-  accessToken   String   @db.Text
-  refreshToken  String   @db.Text
-  expiresAt     DateTime
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
 }
