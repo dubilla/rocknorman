@@ -1,10 +1,20 @@
 'use client';
 
 import { useSession, signOut } from 'next-auth/react';
+import { useState } from 'react';
 import SpotifyAccounts from '../components/SpotifyAccounts';
+import SpotifyPlaylists from '../components/SpotifyPlaylists';
 
 export default function Dashboard() {
   const { data: session } = useSession();
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+
+  const handleSelectPlaylist = (playlist) => {
+    setSelectedPlaylist(playlist);
+    // Here you would typically open a modal or navigate to a form
+    // to associate this playlist with a run
+    console.log('Selected playlist:', playlist);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -26,7 +36,25 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
+          
           <SpotifyAccounts />
+          
+          {selectedPlaylist && (
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h3 className="font-medium">Selected Playlist: {selectedPlaylist.name}</h3>
+              <p className="text-sm text-gray-600">
+                {selectedPlaylist.tracks.total} tracks • Created by {selectedPlaylist.owner.display_name}
+              </p>
+              <button 
+                onClick={() => setSelectedPlaylist(null)}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+              >
+                Clear Selection
+              </button>
+            </div>
+          )}
+          
+          <SpotifyPlaylists onSelectPlaylist={handleSelectPlaylist} />
         </div>
       </div>
     </div>
