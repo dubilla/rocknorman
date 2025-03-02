@@ -16,6 +16,7 @@ export default function RunDetails() {
   const [loadingTracks, setLoadingTracks] = useState(false);
   const [error, setError] = useState(null);
   const [tracksError, setTracksError] = useState(null);
+  const [activeTab, setActiveTab] = useState('tracks');
 
   useEffect(() => {
     const fetchRunDetails = async () => {
@@ -158,6 +159,67 @@ export default function RunDetails() {
   // Calculate coverage percentage (should be close to 100% with partial track)
   const coveragePercentage = Math.min(100, Math.round((totalTracksDuration / runDurationMs) * 100));
   
+  // Add this function to calculate mile/km markers for each track
+  const getTracksWithDistanceMarkers = () => {
+    if (!run || !playlistTracks.length) return [];
+    
+    // Parse pace to minutes per distance unit
+    const [paceMinutes, paceSeconds] = run.pace.split(':').map(Number);
+    const paceInMinutes = paceMinutes + (paceSeconds / 60);
+    
+    // Calculate how long it takes to cover one unit of distance (km or mile)
+    const minutesPerUnit = paceInMinutes; // e.g., 5 minutes per km
+    const msPerUnit = minutesPerUnit * 60 * 1000; // milliseconds per km/mile
+    
+    // Get tracks that will play during the run
+    const { tracks } = getTracksForRun();
+    
+    // Add distance markers to each track
+    return tracks.map(track => {
+      const startDistance = track.startTime / msPerUnit;
+      const endDistance = track.endTime / msPerUnit;
+      
+      // Format distance markers with one decimal place
+      const startDistanceFormatted = startDistance.toFixed(1);
+      const endDistanceFormatted = endDistance.toFixed(1);
+      
+      // Calculate which distance units this track spans
+      const startUnit = Math.floor(startDistance);
+      const endUnit = Math.ceil(endDistance);
+      const distanceUnits = [];
+      
+      for (let i = startUnit; i < endUnit; i++) {
+        // Only include units that are within the run distance
+        if (i <= parseFloat(run.distance)) {
+          distanceUnits.push(i);
+        }
+      }
+      
+      return {
+        ...track,
+        startDistance,
+        endDistance,
+        startDistanceFormatted,
+        endDistanceFormatted,
+        distanceUnits,
+      };
+    });
+  };
+
+  // Get tracks with distance markers
+  const tracksWithMarkers = getTracksWithDistanceMarkers();
+
+  // Group tracks by distance unit (km or mile)
+  const tracksByDistanceUnit = {};
+  tracksWithMarkers.forEach(track => {
+    track.distanceUnits.forEach(unit => {
+      if (!tracksByDistanceUnit[unit]) {
+        tracksByDistanceUnit[unit] = [];
+      }
+      tracksByDistanceUnit[unit].push(track);
+    });
+  });
+  
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -269,53 +331,125 @@ export default function RunDetails() {
                   <div className="mb-3 text-sm text-gray-600">
                     <span className="font-medium">Music duration:</span> {totalTracksDurationFormatted} ({coveragePercentage}% of run)
                   </div>
-                  <div className="max-h-80 overflow-y-auto border rounded-md">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50 sticky top-0">
-                        <tr>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            #
-                          </th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Track
-                          </th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Duration
-                          </th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Status
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {tracksForRun.map((item, index) => (
-                          <tr key={item.track.id} className={!item.willComplete ? 'bg-yellow-50' : ''}>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                              {index + 1}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{item.track.name}</div>
-                              <div className="text-xs text-gray-500">{item.track.artists.map(a => a.name).join(', ')}</div>
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                              {formatDuration(item.track.duration_ms)}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {item.willComplete ? (
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                  Complete
-                                </span>
-                              ) : (
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                  {item.percentComplete}% Complete
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  
+                  {/* Tab navigation for different views */}
+                  <div className="mb-4 border-b">
+                    <nav className="-mb-px flex space-x-8">
+                      <button
+                        onClick={() => setActiveTab('tracks')}
+                        className={`pb-2 px-1 ${
+                          activeTab === 'tracks'
+                            ? 'border-b-2 border-blue-500 text-blue-600 font-medium'
+                            : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        Track List
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('byDistance')}
+                        className={`pb-2 px-1 ${
+                          activeTab === 'byDistance'
+                            ? 'border-b-2 border-blue-500 text-blue-600 font-medium'
+                            : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                      >
+                        By {run.distanceUnit}
+                      </button>
+                    </nav>
                   </div>
+                  
+                  {/* Track list view */}
+                  {activeTab === 'tracks' && (
+                    <div className="max-h-80 overflow-y-auto border rounded-md">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              #
+                            </th>
+                            <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Track
+                            </th>
+                            <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Duration
+                            </th>
+                            <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {run.distanceUnit} Marker
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {tracksWithMarkers.map((item, index) => (
+                            <tr key={item.track.id} className={!item.willComplete ? 'bg-yellow-50' : ''}>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                                {index + 1}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">{item.track.name}</div>
+                                <div className="text-xs text-gray-500">{item.track.artists.map(a => a.name).join(', ')}</div>
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
+                                {formatDuration(item.track.duration_ms)}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap text-sm">
+                                <span className="text-gray-700">
+                                  {item.startDistanceFormatted} - {item.endDistanceFormatted} {run.distanceUnit}
+                                </span>
+                                {!item.willComplete && (
+                                  <span className="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                    {item.percentComplete}%
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  
+                  {/* By distance view */}
+                  {activeTab === 'byDistance' && (
+                    <div className="max-h-80 overflow-y-auto border rounded-md">
+                      <div className="divide-y divide-gray-200">
+                        {Object.keys(tracksByDistanceUnit)
+                          .sort((a, b) => parseInt(a) - parseInt(b))
+                          .map(unit => (
+                            <div key={unit} className="p-4">
+                              <h3 className="font-medium text-gray-900 mb-2">
+                                {unit} {parseInt(unit) === 1 ? run.distanceUnit : `${run.distanceUnit}s`}
+                              </h3>
+                              <div className="space-y-2">
+                                {tracksByDistanceUnit[unit].map(item => (
+                                  <div 
+                                    key={`${unit}-${item.track.id}`} 
+                                    className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50"
+                                  >
+                                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                      <span className="text-xs font-medium text-green-800">
+                                        {Math.round((item.endDistance - Math.max(item.startDistance, parseInt(unit))) / 
+                                          (Math.min(item.endDistance, parseInt(unit) + 1) - Math.max(item.startDistance, parseInt(unit))) * 100)}%
+                                      </span>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm font-medium text-gray-900 truncate">
+                                        {item.track.name}
+                                      </p>
+                                      <p className="text-xs text-gray-500 truncate">
+                                        {item.track.artists.map(a => a.name).join(', ')}
+                                      </p>
+                                    </div>
+                                    <div className="flex-shrink-0 text-xs text-gray-500">
+                                      {formatDuration(item.track.duration_ms)}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
