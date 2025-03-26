@@ -1,3 +1,33 @@
+# Rocknorman - Your Running Soundtrack Manager
+
+Rocknorman is a web application that helps runners create and manage perfectly-timed Spotify playlists for their runs. The app calculates exactly which songs you'll hear at each stage of your run based on your distance, pace, and chosen playlist.
+
+## Features
+
+- 🏃‍♂️ Create personalized running plans with distance and pace targets
+- 🎵 Integration with Spotify for playlist management
+- ⏱️ Precise song timing calculations based on your run parameters
+- 📊 View songs by distance markers (miles/kilometers)
+- 🔄 Real-time playlist duration and coverage analysis
+- 📱 Responsive design for both desktop and mobile use
+
+## Prerequisites
+
+Before you begin, ensure you have installed:
+- Node.js (v16.x or higher)
+- npm or yarn
+- A Spotify Developer account and application
+
+## Environment Setup
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd rocknorman
+```
+
+2. Create a `.env.local` file in the root directory with the following variables:
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
